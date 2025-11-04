@@ -58,12 +58,12 @@ ENV PLUGIN_REMOTE_INSTALLING_ENABLED=true
 ENV PLUGIN_REMOTE_INSTALLING_HOST=0.0.0.0
 ENV PLUGIN_REMOTE_INSTALLING_PORT=5003
 ENV PLUGIN_STORAGE_TYPE=local
-ENV PLUGIN_STORAGE_LOCAL_ROOT=
+ENV PLUGIN_STORAGE_LOCAL_ROOT=/tmp
 
-# Plugin configuration for local platform
+# Plugin configuration for local platform (paths are relative to PLUGIN_STORAGE_LOCAL_ROOT for OSS)
 ENV PLUGIN_WORKING_PATH=/tmp/plugins
-ENV PLUGIN_INSTALLED_PATH=/tmp/plugins/installed
-ENV PLUGIN_PACKAGE_CACHE_PATH=/tmp/plugins/packages
+ENV PLUGIN_INSTALLED_PATH=plugins/installed
+ENV PLUGIN_PACKAGE_CACHE_PATH=plugins/packages
 
 # Configure Python to install packages in /tmp for runtime installations
 ENV PYTHONPATH=""
