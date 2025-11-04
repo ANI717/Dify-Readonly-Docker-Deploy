@@ -36,6 +36,18 @@ RUN set -ex && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
+# General environment variables (set BEFORE installing uv)
+ENV HOME=/tmp
+ENV TMPDIR=/tmp
+ENV XDG_CACHE_HOME=/tmp/.cache
+
+# UV (package installer) configuration (set BEFORE installing uv)
+ENV UV_PATH=/usr/local/bin/uv
+ENV UV_CACHE_DIR=/tmp/uv-cache
+ENV UV_TOOL_DIR=/tmp/uv-tools
+ENV UV_PYTHON_INSTALL_DIR=/tmp/uv-python
+ENV UV_PROJECT_ENVIRONMENT=/tmp/python-packages
+
 # Install dify_plugin to speedup the environment setup, test uv and preload tiktoken
 RUN set -ex && \
     rm -f /usr/lib/python*/EXTERNALLY-MANAGED && \
@@ -43,18 +55,6 @@ RUN set -ex && \
     uv pip install --system dify_plugin && \
     python3 -c "from uv._find_uv import find_uv_bin;print(find_uv_bin());" && \
     python3 -c "import tiktoken; encodings = ['o200k_base', 'cl100k_base', 'p50k_base', 'r50k_base', 'p50k_edit', 'gpt2']; [tiktoken.get_encoding(encoding).special_tokens_set for encoding in encodings]"
-
-# General environment variables
-ENV HOME=/tmp
-ENV TMPDIR=/tmp
-ENV XDG_CACHE_HOME=/tmp/.cache
-
-# UV (package installer) configuration
-ENV UV_PATH=/usr/local/bin/uv
-ENV UV_CACHE_DIR=/tmp/uv-cache
-ENV UV_TOOL_DIR=/tmp/uv-tools
-ENV UV_PYTHON_INSTALL_DIR=/tmp/uv-python
-ENV UV_PROJECT_ENVIRONMENT=/tmp/python-packages
 
 # Pip configuration
 ENV PIP_USER=1
