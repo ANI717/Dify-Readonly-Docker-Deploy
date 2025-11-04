@@ -18,10 +18,6 @@ RUN go build \
     -X 'github.com/langgenius/dify-plugin-daemon/internal/manifest.BuildTimeX=$(date -u +%Y-%m-%dT%H:%M:%S%z)'" \
     -o /app/main cmd/server/main.go
 
-# copy entrypoint.sh
-COPY entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
-
 FROM python:3.12-slim-bookworm
 
 WORKDIR /app
@@ -48,10 +44,28 @@ RUN set -ex && \
     python3 -c "from uv._find_uv import find_uv_bin;print(find_uv_bin());" && \
     python3 -c "import tiktoken; encodings = ['o200k_base', 'cl100k_base', 'p50k_base', 'r50k_base', 'p50k_edit', 'gpt2']; [tiktoken.get_encoding(encoding).special_tokens_set for encoding in encodings]"
 
+# General environment variables
+ENV HOME=/tmp
+ENV TMPDIR=/tmp
+ENV XDG_CACHE_HOME=/tmp/.cache
+
+# UV (package installer) configuration
 ENV UV_PATH=/usr/local/bin/uv
 ENV UV_CACHE_DIR=/tmp/uv-cache
-ENV XDG_CACHE_HOME=/tmp/.cache
-ENV HOME=/tmp
+ENV UV_TOOL_DIR=/tmp/uv-tools
+ENV UV_PYTHON_INSTALL_DIR=/tmp/uv-python
+ENV UV_PROJECT_ENVIRONMENT=/tmp/python-packages
+
+# Pip configuration
+ENV PIP_USER=1
+ENV PIP_CACHE_DIR=/tmp/pip-cache
+ENV PYTHONUSERBASE=/tmp/python-packages
+# Include both possible site-packages locations in PYTHONPATH
+ENV PYTHONPATH=/tmp/python-packages/lib/python3.12/site-packages:/tmp/python-packages/lib/python/site-packages
+# Add user package binaries to PATH
+ENV PATH=/tmp/python-packages/bin:$PATH
+
+# Application configuration
 ENV PLATFORM=$PLATFORM
 ENV GIN_MODE=release
 ENV PLUGIN_REMOTE_INSTALLING_ENABLED=true
@@ -64,27 +78,32 @@ ENV PLUGIN_STORAGE_LOCAL_ROOT=/tmp
 ENV PLUGIN_WORKING_PATH=/tmp/plugins
 ENV PLUGIN_INSTALLED_PATH=plugins/installed
 ENV PLUGIN_PACKAGE_CACHE_PATH=plugins/packages
+ENV PLUGIN_MEDIA_CACHE_PATH=media-cache
 
-# Configure Python to install packages in /tmp for runtime installations
-ENV PYTHONPATH=""
-ENV PYTHONUSERBASE=/tmp/python-packages
-ENV PIP_USER=1
-ENV PYTHONPATH=/tmp/python-packages/lib/python3.12/site-packages:$PYTHONPATH
+# Persistence storage configuration (relative to PLUGIN_STORAGE_LOCAL_ROOT)
+ENV PERSISTENCE_STORAGE_PATH=persistence
 
 # Create a non-root user
 RUN groupadd -r dify && useradd -r -g dify -u 1001 dify
 
 # Create necessary directories in tmp for write access
 RUN mkdir -p /tmp/.tiktoken /tmp/storage /tmp/logs /tmp/python-packages \
-    /tmp/.cache /tmp/uv-cache /tmp/plugins /tmp/plugins/installed /tmp/plugins/packages && \
+    /tmp/.cache /tmp/uv-cache /tmp/uv-tools /tmp/uv-python /tmp/pip-cache \
+    /tmp/plugins /tmp/plugins/installed /tmp/plugins/packages \
+    /tmp/persistence /tmp/media-cache && \
     chmod -R 755 /tmp/.tiktoken /tmp/storage /tmp/logs /tmp/python-packages  \
-    /tmp/.cache /tmp/uv-cache /tmp/plugins /tmp/plugins/installed /tmp/plugins/packages
+    /tmp/.cache /tmp/uv-cache /tmp/uv-tools /tmp/uv-python /tmp/pip-cache \
+    /tmp/plugins /tmp/plugins/installed /tmp/plugins/packages \
+    /tmp/persistence /tmp/media-cache
 
 COPY --from=builder /app/main /app/entrypoint.sh /app/
 
-# Set ownership of the application files and directories to the dify user
-RUN chown -R dify:dify /app /tmp/.tiktoken /tmp/storage /tmp/logs /tmp/python-packages \
-    /tmp/.cache /tmp/uv-cache /tmp/plugins /tmp/plugins/installed /tmp/plugins/packages
+# Set permissions and ownership of the application files and directories to the dify user
+RUN chmod +x /app/main /app/entrypoint.sh && \
+    chown -R dify:dify /app /tmp/.tiktoken /tmp/storage /tmp/logs /tmp/python-packages \
+    /tmp/.cache /tmp/uv-cache /tmp/uv-tools /tmp/uv-python /tmp/pip-cache \
+    /tmp/plugins /tmp/plugins/installed /tmp/plugins/packages \
+    /tmp/persistence /tmp/media-cache
 
 # Change working directory to /tmp so the app creates storage there
 WORKDIR /tmp
