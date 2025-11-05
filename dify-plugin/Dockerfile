@@ -83,8 +83,8 @@ ENV PLUGIN_MEDIA_CACHE_PATH=media-cache
 # Persistence storage configuration (relative to PLUGIN_STORAGE_LOCAL_ROOT)
 ENV PERSISTENCE_STORAGE_PATH=persistence
 
-# Create a non-root user
-RUN groupadd -r dify && useradd -r -g dify -u 1001 dify
+# Create a non-root user that points to /tmp to keep writable home
+RUN groupadd -r dify && useradd -r -g dify -u 1001 -d /tmp dify
 
 # Create necessary directories in tmp for write access
 RUN mkdir -p /tmp/.tiktoken /tmp/storage /tmp/logs /tmp/python-packages \
@@ -108,8 +108,9 @@ RUN chmod +x /app/main /app/entrypoint.sh && \
 # Change working directory to /tmp so the app creates storage there
 WORKDIR /tmp
 
-# Switch to non-root user
+# Switch to non-root user and ensure HOME resolves to writable tmp
 USER dify
+ENV HOME=/tmp
 
 # run the server, using sh as the entrypoint to avoid process being the root process
 # and using bash to recycle resources
